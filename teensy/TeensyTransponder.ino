@@ -39,7 +39,7 @@ const byte inputPins[num_digits][pins_per_digit] = {
 
 byte pinValues[num_digits][pins_per_digit];
 
-const int identLightPin = 15;
+const int identLightPin = 16;
 
 
 String lastSquawk = "";
