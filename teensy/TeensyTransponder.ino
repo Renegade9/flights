@@ -12,17 +12,19 @@
       (3 bits).
    b) "Ident" button
    c) 4-position switch (not counting off):  Off-Sby-On-Alt-Tst
-   d) Output LED to indicate transponder interrogation
+   d) Output LED to indicate transponder interrogation ("reply light")
  
  Created 30 March 2016 by Chris Saulit
  This sample code is in the public domain.
  */
+ 
+#include <Bounce.h>
 
 // Special variables to access the transponder datarefs
 
 FlightSimInteger transponderLight;
 FlightSimInteger transponderCode;
-
+FlightSimCommand transponderIdent;
 
 // Transponder Hardware Pins
 
@@ -39,8 +41,10 @@ const byte inputPins[num_digits][pins_per_digit] = {
 
 byte pinValues[num_digits][pins_per_digit];
 
-const int identLightPin = 16;
+const int identPin = 15;
+const int replyLightPin = 16;
 
+Bounce identButton = Bounce(identPin, 5);      // Ident Pushbutton, 5ms debounce
 
 String lastSquawk = "";
 
@@ -48,15 +52,17 @@ String lastSquawk = "";
 void setup() {
   
   pinMode(LED_BUILTIN, OUTPUT);  // pin 11 on Teensy 2.0, pin 6 on Teensy++ 2.0
-  pinMode(identLightPin, OUTPUT);
+  pinMode(replyLightPin, OUTPUT);
 
-  
   transponderLight = XPlaneRef("sim/cockpit/radios/transponder_light");
   transponderLight.onChange(updateLED);
 
-
   // get the current transponder code setting
   transponderCode = XPlaneRef("sim/cockpit2/radios/actuators/transponder_code");
+
+  // set up ident button dataref
+  transponderIdent = XPlaneRef("sim/transponder/transponder_ident");
+
 
     // set the pin modes
   for (int digit = 0; digit < num_digits; digit++) {
@@ -65,11 +71,9 @@ void setup() {
     }
   }
 
-
-  
+  // ident pin
+  pinMode(identPin, INPUT_PULLUP);
 }
-
-
 
 String read_squawk() {
 
@@ -86,11 +90,7 @@ String read_squawk() {
   }
 
   return squawk;
-
 }
-
-
-
 
 // loop runs repetitively, as long as power is on
 void loop() {
@@ -105,16 +105,24 @@ void loop() {
     transponderCode = squawk.toInt();
   }
 
+  identButton.update();
+  if (identButton.fallingEdge()) {
+    transponderIdent = 1;
+  }
+  if (identButton.risingEdge()) {
+    transponderIdent = 0;
+  }
+
 }
 
 // updateLED runs only when X-Plane changes transponderLight
 void updateLED(long value) {
   if (value == 0) {
     digitalWrite(LED_BUILTIN, LOW);
-    digitalWrite(identLightPin, LOW);
+    digitalWrite(replyLightPin, LOW);
   } else {
     digitalWrite(LED_BUILTIN, HIGH);
-    digitalWrite(identLightPin, HIGH);
+    digitalWrite(replyLightPin, HIGH);
   }
 }
 
